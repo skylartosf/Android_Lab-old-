@@ -1,33 +1,32 @@
 package com.example.dialogandsnackbar
 
 import android.app.AlertDialog
+import android.app.Dialog
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.view.View
 import android.widget.Button
 import android.widget.Toast
+import com.example.dialogandsnackbar.databinding.ActivityMainBinding
+import com.example.dialogandsnackbar.databinding.DialogCustomBinding
 import com.google.android.material.snackbar.Snackbar
 
 class MainActivity : AppCompatActivity() {
 
-    var btnSnackbar: Button? = null
-    var btnAlertDial: Button? = null
-    var btnCustomDial: Button? = null
-    var btnCustomProgressDial: Button? = null
+    private lateinit var binding: ActivityMainBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        btnSnackbar = findViewById(R.id.btn_snackbar)
-        btnAlertDial = findViewById(R.id.btn_alert_dialog)
-        btnCustomDial = findViewById(R.id.btn_custom_dialog)
-        btnCustomProgressDial = findViewById(R.id.btn_custom_progress_dialog)
-
-        btnSnackbar?.setOnClickListener { view ->
+        // 1. Snackbar
+        binding.btnSnackbar.setOnClickListener { view ->
             Snackbar.make(view, "You've clicked first button.", Snackbar.LENGTH_LONG).show()
         }
 
-        btnAlertDial?.setOnClickListener { view ->
+        // 2. Alert Dialog
+        binding.btnAlertDialog.setOnClickListener { view ->
             val builder = AlertDialog.Builder(this)
             builder.setTitle("Alert")
             builder.setMessage("This is Alert Dialog which is used to show alerts in our app.")
@@ -54,5 +53,27 @@ class MainActivity : AppCompatActivity() {
             alertDialog.setCancelable(false) // user cannot ignore after clicking on remaining screen area
             alertDialog.show()
         }
+
+        // 3. Custom Dialog
+        binding.btnCustomDialog.setOnClickListener { view ->
+            val customDialog = Dialog(this)
+            var dialBind: DialogCustomBinding = DialogCustomBinding.inflate(layoutInflater)
+            customDialog.setContentView(dialBind.root)
+            dialBind.tvSubmit.setOnClickListener(View.OnClickListener {
+                // applicationContext 대신 this를 써도 돼,
+                // if you're within closure 같은 상황에서는 applicationContext를 써야 돼
+                // 그래서 it's safer to use applicationContext
+                Toast.makeText(applicationContext, "You've just clicked Submit!", Toast.LENGTH_SHORT).show()
+                customDialog.dismiss()
+            })
+            dialBind.tvCancel.setOnClickListener(View.OnClickListener {
+                Toast.makeText(applicationContext, "You've just clicked Cancel!", Toast.LENGTH_SHORT).show()
+                customDialog.dismiss()
+            })
+
+            customDialog.show()
+        }
+
+        // 4. Custom Progress Dialog
     }
 }
