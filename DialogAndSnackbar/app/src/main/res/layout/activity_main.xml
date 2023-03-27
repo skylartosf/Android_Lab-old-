@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity"
+    android:orientation="vertical"
+    android:gravity="center">
+
+    <Button
+        android:id="@+id/btn_snackbar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Display snackbar"
+        android:layout_margin="10dp"/>
+
+    <Button
+        android:id="@+id/btn_alert_dialog"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="ALERT DIALOG"
+        android:layout_margin="10dp" />
+
+    <Button
+        android:id="@+id/btn_custom_dialog"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="CUSTOM DIALOG"
+        android:layout_margin="10dp" />
+
+    <Button
+        android:id="@+id/btn_custom_progress_dialog"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="CUSTOM PROGRESS DIALOG"
+        android:layout_margin="10dp" />
+
+</LinearLayout>
