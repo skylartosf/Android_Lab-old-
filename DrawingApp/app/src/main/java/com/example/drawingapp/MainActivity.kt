@@ -22,6 +22,9 @@ import codes.side.andcolorpicker.hsl.HSLColorPickerSeekBar
 import codes.side.andcolorpicker.model.IntegerHSLColor
 import kotlin.math.roundToInt
 import android.Manifest
+import android.content.Intent
+import android.provider.MediaStore
+import android.widget.ImageView
 import androidx.core.app.ActivityCompat
 
 class MainActivity : AppCompatActivity() {
@@ -31,6 +34,20 @@ class MainActivity : AppCompatActivity() {
 
     private var ibPaintRandom: ImageButton? = null
 
+    // (외부 저장소 접근 권한이 승인되면) 갤러리에 접근하고, 유저가 사진을 선택하면
+    // 그 URI(내 저장소 내에서의 path/location)가 result.data.data에 담기는데
+    // 그것으로 캔버스의 배경을 설정해준다
+    // 이미지를 copy해서 가져오는 게 아니라, 기기 내 img를 그 위치를 가져와서 배경으로 설정해주는 식. (use it from there)
+    val openGalleryLauncher: ActivityResultLauncher<Intent> =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            result ->
+            if (result.resultCode == RESULT_OK && result.data != null) {
+                val imgBackground: ImageView = findViewById(R.id.iv_background)
+                imgBackground.setImageURI(result.data?.data)
+            }
+        }
+
+    // 접근 권한이 승인/거부됐는지 체크한다
     val reqPerm: ActivityResultLauncher<Array<String>> =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { // 나중에 여러 허가 요청할 걸 대비해서 미리 multiple
             perms ->
@@ -40,6 +57,9 @@ class MainActivity : AppCompatActivity() {
 
                 if (isGranted) {
                     Toast.makeText(this, "Permission granted. You can read the storage files.", Toast.LENGTH_SHORT).show()
+                    // 외부 저장소 접근 권한이 설정됐으니, 갤러리에 접근 시도
+                    val pickIntent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+                    openGalleryLauncher.launch(pickIntent)
                 } else {
                     when (permName) {
                         // 이 Manifest는 자동으로 java.jar을 import하려 하는데, 지우고, android.Manifest를 import 해야 한다
