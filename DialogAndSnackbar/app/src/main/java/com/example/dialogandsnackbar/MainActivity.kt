@@ -75,5 +75,10 @@ class MainActivity : AppCompatActivity() {
         }
 
         // 4. Custom Progress Dialog
+        binding.btnCustomProgressDialog.setOnClickListener { view ->
+            val customProgDial = Dialog(this)
+            customProgDial.setContentView(R.layout.dialog_custom_progress)
+            customProgDial.show()
+        }
     }
 }
