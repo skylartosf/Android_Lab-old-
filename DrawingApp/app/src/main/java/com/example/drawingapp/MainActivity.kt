@@ -217,7 +217,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun getBitmapFromView(view: View): Bitmap {
         val returnedBitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(returnedBitmap)
+        val canvas = Canvas(returnedBitmap) // 이러면 향후 canvas에 그리는 모든 작업은 returnedBitmap에 반영된다
         val bgDrawable = view.background
         if (bgDrawable != null) { // 배경이 있으면 canvas에 배경을 그린다
             bgDrawable.draw(canvas)
@@ -225,7 +225,7 @@ class MainActivity : AppCompatActivity() {
             canvas.drawColor(Color.WHITE)
         }
 
-        view.draw(canvas) // draw the canvas onto our view
+        view.draw(canvas) // the view is rendered to the canvas
 
         return returnedBitmap
     }
