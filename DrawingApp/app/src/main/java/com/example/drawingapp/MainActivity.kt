@@ -1,14 +1,17 @@
 package com.example.drawingapp
 
+import android.app.AlertDialog
 import android.app.Dialog
 import android.graphics.Color
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.ImageButton
 import android.widget.LinearLayout
+import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.get
@@ -18,6 +21,8 @@ import codes.side.andcolorpicker.group.registerPickers
 import codes.side.andcolorpicker.hsl.HSLColorPickerSeekBar
 import codes.side.andcolorpicker.model.IntegerHSLColor
 import kotlin.math.roundToInt
+import android.Manifest
+import androidx.core.app.ActivityCompat
 
 class MainActivity : AppCompatActivity() {
 
@@ -25,6 +30,25 @@ class MainActivity : AppCompatActivity() {
     private var mImageBtnCurPaint: ImageButton? = null
 
     private var ibPaintRandom: ImageButton? = null
+
+    val reqPerm: ActivityResultLauncher<Array<String>> =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { // 나중에 여러 허가 요청할 걸 대비해서 미리 multiple
+            perms ->
+            perms.entries.forEach {
+                val permName = it.key
+                val isGranted = it.value
+
+                if (isGranted) {
+                    Toast.makeText(this, "Permission granted. You can read the storage files.", Toast.LENGTH_SHORT).show()
+                } else {
+                    when (permName) {
+                        // 이 Manifest는 자동으로 java.jar을 import하려 하는데, 지우고, android.Manifest를 import 해야 한다
+                        Manifest.permission.READ_EXTERNAL_STORAGE ->
+                            Toast.makeText(this, "Oops, you've just denied the permission.", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,6 +66,25 @@ class MainActivity : AppCompatActivity() {
         val ibBrush: ImageButton = findViewById(R.id.ib_brush)
         ibBrush.setOnClickListener {
             showBrushSizeChooserDialog()
+        }
+
+        val ibGallery: ImageButton = findViewById(R.id.ib_gallery)
+        ibGallery.setOnClickListener {
+            reqStoragePerm()
+        }
+    }
+
+    private fun reqStoragePerm() {
+        if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+            Manifest.permission.READ_EXTERNAL_STORAGE)
+        ) {
+            showRationaleDialog("Drawing App",
+                "Drawing App needs to access your external storage")
+        } else {
+            reqPerm.launch(arrayOf(
+                Manifest.permission.READ_EXTERNAL_STORAGE
+                // TODO: add writing external storage permission
+            ))
         }
     }
 
@@ -128,6 +171,16 @@ class MainActivity : AppCompatActivity() {
                 colorPickerDialog.dismiss()
             }
         }
+    }
+
+    private fun showRationaleDialog(title: String, msg: String) {
+        val builder: AlertDialog.Builder = AlertDialog.Builder(this)
+        builder.setTitle(title)
+            .setMessage(msg)
+            .setPositiveButton("Cancel") { dialog, _ ->
+                dialog.dismiss()
+            }
+        builder.create().show()
     }
 
 }
