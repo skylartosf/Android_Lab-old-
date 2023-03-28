@@ -23,6 +23,8 @@ import codes.side.andcolorpicker.model.IntegerHSLColor
 import kotlin.math.roundToInt
 import android.Manifest
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.provider.MediaStore
 import android.widget.ImageView
 import androidx.core.app.ActivityCompat
@@ -213,4 +215,18 @@ class MainActivity : AppCompatActivity() {
         builder.create().show()
     }
 
+    private fun getBitmapFromView(view: View): Bitmap {
+        val returnedBitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(returnedBitmap)
+        val bgDrawable = view.background
+        if (bgDrawable != null) { // 배경이 있으면 canvas에 배경을 그린다
+            bgDrawable.draw(canvas)
+        } else { // 배경이 없으면 canvas에 흰색으로 채운다
+            canvas.drawColor(Color.WHITE)
+        }
+
+        view.draw(canvas) // draw the canvas onto our view
+
+        return returnedBitmap
+    }
 }
