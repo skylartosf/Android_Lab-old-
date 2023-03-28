@@ -22,12 +22,24 @@ import codes.side.andcolorpicker.hsl.HSLColorPickerSeekBar
 import codes.side.andcolorpicker.model.IntegerHSLColor
 import kotlin.math.roundToInt
 import android.Manifest
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.provider.ContactsContract.CommonDataKinds.Im
 import android.provider.MediaStore
+import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.core.app.ActivityCompat
+import androidx.core.content.PackageManagerCompat
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileOutputStream
 
 class MainActivity : AppCompatActivity() {
 
@@ -41,8 +53,7 @@ class MainActivity : AppCompatActivity() {
     // 그것으로 캔버스의 배경을 설정해준다
     // 이미지를 copy해서 가져오는 게 아니라, 기기 내 img를 그 위치를 가져와서 배경으로 설정해주는 식. (use it from there)
     val openGalleryLauncher: ActivityResultLauncher<Intent> =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-            result ->
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK && result.data != null) {
                 val imgBackground: ImageView = findViewById(R.id.iv_background)
                 imgBackground.setImageURI(result.data?.data)
@@ -52,21 +63,30 @@ class MainActivity : AppCompatActivity() {
     // 접근 권한이 승인/거부됐는지 체크한다
     val reqPerm: ActivityResultLauncher<Array<String>> =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { // 나중에 여러 허가 요청할 걸 대비해서 미리 multiple
-            perms ->
+                perms ->
             perms.entries.forEach {
                 val permName = it.key
                 val isGranted = it.value
 
                 if (isGranted) {
-                    Toast.makeText(this, "Permission granted. You can read the storage files.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        this,
+                        "Permission granted. You can read the storage files.",
+                        Toast.LENGTH_SHORT
+                    ).show()
                     // 외부 저장소 접근 권한이 설정됐으니, 갤러리에 접근 시도
-                    val pickIntent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+                    val pickIntent =
+                        Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
                     openGalleryLauncher.launch(pickIntent)
                 } else {
                     when (permName) {
                         // 이 Manifest는 자동으로 java.jar을 import하려 하는데, 지우고, android.Manifest를 import 해야 한다
                         Manifest.permission.READ_EXTERNAL_STORAGE ->
-                            Toast.makeText(this, "Oops, you've just denied the permission.", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                this,
+                                "Oops, you've just denied the permission.",
+                                Toast.LENGTH_SHORT
+                            ).show()
                     }
                 }
             }
@@ -104,19 +124,43 @@ class MainActivity : AppCompatActivity() {
         ibGallery.setOnClickListener {
             reqStoragePerm()
         }
+
+        val ibSave: ImageButton = findViewById(R.id.ib_save)
+        ibSave.setOnClickListener {
+            if (isReadStorageAllowed()) {
+                lifecycleScope.launch {
+                    val flDrawingView: FrameLayout = findViewById(R.id.fl_drawing_view_container)
+                    val myBitmap: Bitmap = getBitmapFromView(flDrawingView)
+                    saveBitmapFile(myBitmap)
+                }
+            }
+        }
+    }
+
+    private fun isReadStorageAllowed(): Boolean {
+        var result = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.READ_EXTERNAL_STORAGE
+        )
+        return result == PackageManager.PERMISSION_GRANTED
     }
 
     private fun reqStoragePerm() {
-        if (ActivityCompat.shouldShowRequestPermissionRationale(this,
-            Manifest.permission.READ_EXTERNAL_STORAGE)
-        ) {
-            showRationaleDialog("Drawing App",
-                "Drawing App needs to access your external storage")
-        } else {
-            reqPerm.launch(arrayOf(
+        if (ActivityCompat.shouldShowRequestPermissionRationale(
+                this,
                 Manifest.permission.READ_EXTERNAL_STORAGE
-                // TODO: add writing external storage permission
-            ))
+            )
+        ) {
+            showRationaleDialog(
+                "Drawing App",
+                "Drawing App needs to access your external storage"
+            )
+        } else {
+            reqPerm.launch(
+                arrayOf(
+                    Manifest.permission.READ_EXTERNAL_STORAGE,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE
+                )
+            )
         }
     }
 
@@ -171,7 +215,8 @@ class MainActivity : AppCompatActivity() {
             val hslHue: HSLColorPickerSeekBar = colorPickerDialog.findViewById(R.id.hsl_hue)
             val hslSat: HSLColorPickerSeekBar = colorPickerDialog.findViewById(R.id.hsl_saturation)
             val hslLight: HSLColorPickerSeekBar = colorPickerDialog.findViewById(R.id.hsl_lightness)
-            val hslAlpha: HSLAlphaColorPickerSeekBar = colorPickerDialog.findViewById(R.id.hsl_alpha)
+            val hslAlpha: HSLAlphaColorPickerSeekBar =
+                colorPickerDialog.findViewById(R.id.hsl_alpha)
 
             val group = PickerGroup<IntegerHSLColor>().also {
                 it.registerPickers(
@@ -197,7 +242,8 @@ class MainActivity : AppCompatActivity() {
                 val green = Color.green(intColor)
                 val blue = Color.blue(intColor)
                 val alpha = (hslAlpha.pickedColor.alpha * 100.0).roundToInt()
-                val hex: String = String.format("#%s%02x%02x%02x", AlphaToHex.alpha[alpha], red, green, blue)
+                val hex: String =
+                    String.format("#%s%02x%02x%02x", AlphaToHex.alpha[alpha], red, green, blue)
                 drawingView?.setColor(hex)
 
                 colorPickerDialog.dismiss()
@@ -228,5 +274,52 @@ class MainActivity : AppCompatActivity() {
         view.draw(canvas) // the view is rendered to the canvas
 
         return returnedBitmap
+    }
+
+    private suspend fun saveBitmapFile(mBitmap: Bitmap?): String {
+        var result = ""
+        withContext(Dispatchers.IO) {
+            if (mBitmap != null) {
+                try {
+                    val bytes = ByteArrayOutputStream()
+                    mBitmap.compress(Bitmap.CompressFormat.PNG, 90, bytes)
+
+                    // 첫번째: 우리 앱이 있는 위치 + 두번째: 우리 기기에서 이미지 저장할 위치
+                    val f = File(
+                        externalCacheDir?.absoluteFile.toString()
+                                + File.separator + "DrawingApp_" +
+                                System.currentTimeMillis() / 1000 + ".png"
+                    )
+
+                    val fo = FileOutputStream(f)
+                    fo.write(bytes.toByteArray())
+                    fo.close()
+
+                    result = f.absolutePath
+
+                    runOnUiThread {
+                        if (result.isNotEmpty()) {
+                            Toast.makeText(
+                                this@MainActivity,
+                                "File saved at $result",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        } else {
+                            Toast.makeText(
+                                this@MainActivity,
+                                "Something went wrong while saving the file",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                }
+                catch (e: Exception) {
+                    result = ""
+                    e.printStackTrace()
+                }
+            }
+        }
+
+        return result
     }
 }
