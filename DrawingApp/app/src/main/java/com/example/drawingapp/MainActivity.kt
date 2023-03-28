@@ -1,50 +1,49 @@
 package com.example.drawingapp
 
+import android.Manifest
+import android.R.drawable
 import android.app.AlertDialog
 import android.app.Dialog
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
-import androidx.appcompat.app.AppCompatActivity
+import android.graphics.drawable.ScaleDrawable
+import android.graphics.drawable.ShapeDrawable
+import android.media.MediaScannerConnection
 import android.os.Bundle
+import android.provider.MediaStore
+import android.util.Log
+import android.util.TypedValue
 import android.view.View
-import android.widget.Button
-import android.widget.ImageButton
-import android.widget.LinearLayout
-import android.widget.Toast
+import android.widget.*
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.get
+import androidx.core.view.updateLayoutParams
+import androidx.lifecycle.lifecycleScope
 import codes.side.andcolorpicker.alpha.HSLAlphaColorPickerSeekBar
 import codes.side.andcolorpicker.group.PickerGroup
 import codes.side.andcolorpicker.group.registerPickers
 import codes.side.andcolorpicker.hsl.HSLColorPickerSeekBar
 import codes.side.andcolorpicker.model.IntegerHSLColor
-import kotlin.math.roundToInt
-import android.Manifest
-import android.content.Context
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.media.MediaScannerConnection
-import android.provider.ContactsContract.CommonDataKinds.Im
-import android.provider.MediaStore
-import android.widget.FrameLayout
-import android.widget.ImageView
-import androidx.core.app.ActivityCompat
-import androidx.core.content.PackageManagerCompat
-import androidx.lifecycle.lifecycleScope
-import codes.side.andcolorpicker.converter.setFromColorInt
 import codes.side.andcolorpicker.view.picker.ColorSeekBar
 import codes.side.andcolorpicker.view.picker.OnIntegerHSLColorPickListener
 import codes.side.andcolorpicker.view.swatch.SwatchView
+import com.google.android.material.slider.Slider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import kotlin.math.roundToInt
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -155,6 +154,19 @@ class MainActivity : AppCompatActivity() {
         brushDialog.setTitle("Bursh size: ")
         brushDialog.show()
 
+        var ivBrushSize: ImageView = brushDialog.findViewById(R.id.iv_brush_size)
+        val slider: Slider = brushDialog.findViewById(R.id.slider)
+        slider.addOnChangeListener { slider, value, fromUser ->
+
+            ivBrushSize.updateLayoutParams {
+                height = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value, resources.displayMetrics).toInt()
+                width = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value, resources.displayMetrics).toInt()
+            }
+
+            drawingView?.setSizeForBrush(value)
+        }
+
+        /*
         val smallBtn: ImageButton = brushDialog.findViewById(R.id.ib_small_brush)
         smallBtn.setOnClickListener {
             drawingView?.setSizeForBrush(10.toFloat())
@@ -172,6 +184,7 @@ class MainActivity : AppCompatActivity() {
             drawingView?.setSizeForBrush(30.toFloat())
             brushDialog.dismiss()
         }
+        */
     }
 
     fun paintClicked(view: View) {
