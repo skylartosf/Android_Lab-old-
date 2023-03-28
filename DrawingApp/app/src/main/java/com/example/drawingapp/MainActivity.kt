@@ -45,8 +45,8 @@ class MainActivity : AppCompatActivity() {
 
     private var drawingView: DrawingView? = null
     private var mImageBtnCurPaint: ImageButton? = null
-
     private var ibPaintRandom: ImageButton? = null
+    var customProgressDialog: Dialog? = null
 
     // (외부 저장소 접근 권한이 승인되면) 갤러리에 접근하고, 유저가 사진을 선택하면
     // 그 URI(내 저장소 내에서의 path/location)가 result.data.data에 담기는데
@@ -128,39 +128,13 @@ class MainActivity : AppCompatActivity() {
         val ibSave: ImageButton = findViewById(R.id.ib_save)
         ibSave.setOnClickListener {
             if (isReadStorageAllowed()) {
+                showProgressDialog()
                 lifecycleScope.launch {
                     val flDrawingView: FrameLayout = findViewById(R.id.fl_drawing_view_container)
                     val myBitmap: Bitmap = getBitmapFromView(flDrawingView)
                     saveBitmapFile(myBitmap)
                 }
             }
-        }
-    }
-
-    private fun isReadStorageAllowed(): Boolean {
-        var result = ContextCompat.checkSelfPermission(
-            this, Manifest.permission.READ_EXTERNAL_STORAGE
-        )
-        return result == PackageManager.PERMISSION_GRANTED
-    }
-
-    private fun reqStoragePerm() {
-        if (ActivityCompat.shouldShowRequestPermissionRationale(
-                this,
-                Manifest.permission.READ_EXTERNAL_STORAGE
-            )
-        ) {
-            showRationaleDialog(
-                "Drawing App",
-                "Drawing App needs to access your external storage"
-            )
-        } else {
-            reqPerm.launch(
-                arrayOf(
-                    Manifest.permission.READ_EXTERNAL_STORAGE,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE
-                )
-            )
         }
     }
 
@@ -251,6 +225,33 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun isReadStorageAllowed(): Boolean {
+        var result = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.READ_EXTERNAL_STORAGE
+        )
+        return result == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun reqStoragePerm() {
+        if (ActivityCompat.shouldShowRequestPermissionRationale(
+                this,
+                Manifest.permission.READ_EXTERNAL_STORAGE
+            )
+        ) {
+            showRationaleDialog(
+                "Drawing App",
+                "Drawing App needs to access your external storage"
+            )
+        } else {
+            reqPerm.launch(
+                arrayOf(
+                    Manifest.permission.READ_EXTERNAL_STORAGE,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE
+                )
+            )
+        }
+    }
+
     private fun showRationaleDialog(title: String, msg: String) {
         val builder: AlertDialog.Builder = AlertDialog.Builder(this)
         builder.setTitle(title)
@@ -298,6 +299,7 @@ class MainActivity : AppCompatActivity() {
                     result = f.absolutePath
 
                     runOnUiThread {
+                        cancelProgressDialog()
                         if (result.isNotEmpty()) {
                             Toast.makeText(
                                 this@MainActivity,
@@ -312,8 +314,7 @@ class MainActivity : AppCompatActivity() {
                             ).show()
                         }
                     }
-                }
-                catch (e: Exception) {
+                } catch (e: Exception) {
                     result = ""
                     e.printStackTrace()
                 }
@@ -321,5 +322,18 @@ class MainActivity : AppCompatActivity() {
         }
 
         return result
+    }
+
+    private fun showProgressDialog() {
+        customProgressDialog = Dialog(this@MainActivity)
+        customProgressDialog?.setContentView(R.layout.dialog_progress)
+        customProgressDialog?.show()
+    }
+
+    private fun cancelProgressDialog() {
+        if (customProgressDialog != null) {
+            customProgressDialog?.dismiss()
+            customProgressDialog = null
+        }
     }
 }
