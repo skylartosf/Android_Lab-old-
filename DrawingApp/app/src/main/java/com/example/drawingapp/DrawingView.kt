@@ -17,10 +17,26 @@ class DrawingView(context: Context, attrs: AttributeSet) : View(context, attrs) 
     private var mBrushSize: Float = 0.toFloat()
     private var color = Color.BLACK
     private var canvas: Canvas? = null
+
     private val mPaths = ArrayList<CustomPath>()
+    private val mUndoPaths = ArrayList<CustomPath>()
 
     init {
         setUpDrawing()
+    }
+
+    fun onClickUndo() {
+        if (mPaths.size > 0) {
+            mUndoPaths.add(mPaths.removeAt(mPaths.size - 1))
+            invalidate() // this will internally call onDraw(), so redrawing entire page
+        }
+    }
+
+    fun onClickRedo() {
+        if (mUndoPaths.size > 0) {
+            mPaths.add(mUndoPaths.removeAt(mUndoPaths.size - 1))
+            invalidate()
+        }
     }
 
     private fun setUpDrawing() {
@@ -40,7 +56,6 @@ class DrawingView(context: Context, attrs: AttributeSet) : View(context, attrs) 
         canvas = Canvas(mCanvasBitmap!!)
     }
 
-    // change Canvas to Canvas? if fails
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         canvas.drawBitmap(mCanvasBitmap!!, 0f, 0f, mCanvasPaint) // 좌측 상단에서 시작
@@ -50,6 +65,7 @@ class DrawingView(context: Context, attrs: AttributeSet) : View(context, attrs) 
             mDrawPaint!!.color = p.color
             canvas.drawPath(p, mDrawPaint!!)
         }
+
 
         if (!mDrawPath!!.isEmpty) { // define how thick, how thick 'the paint' should be
             mDrawPaint!!.strokeWidth = mDrawPath!!.brushThickness
@@ -81,6 +97,9 @@ class DrawingView(context: Context, attrs: AttributeSet) : View(context, attrs) 
             MotionEvent.ACTION_UP -> {
                 mPaths.add(mDrawPath!!)
                 mDrawPath = CustomPath(color, mBrushSize)
+
+                // undo -> 다시 쓰면 -> 그 undo한 것들은 undoPaths에 남아있으면 안 돼 (안그럼 redo 때 나타남)
+                if (mUndoPaths.size > 0) mUndoPaths.clear()
             }
             else -> return false
         }
