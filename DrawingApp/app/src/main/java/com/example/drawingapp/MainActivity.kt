@@ -27,6 +27,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.media.MediaScannerConnection
 import android.provider.ContactsContract.CommonDataKinds.Im
 import android.provider.MediaStore
 import android.widget.FrameLayout
@@ -34,6 +35,10 @@ import android.widget.ImageView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.PackageManagerCompat
 import androidx.lifecycle.lifecycleScope
+import codes.side.andcolorpicker.converter.setFromColorInt
+import codes.side.andcolorpicker.view.picker.ColorSeekBar
+import codes.side.andcolorpicker.view.picker.OnIntegerHSLColorPickListener
+import codes.side.andcolorpicker.view.swatch.SwatchView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -69,15 +74,21 @@ class MainActivity : AppCompatActivity() {
                 val isGranted = it.value
 
                 if (isGranted) {
-                    Toast.makeText(
-                        this,
-                        "Permission granted. You can read the storage files.",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    // 외부 저장소 접근 권한이 설정됐으니, 갤러리에 접근 시도
-                    val pickIntent =
-                        Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-                    openGalleryLauncher.launch(pickIntent)
+                    when (permName) {
+                        Manifest.permission.READ_EXTERNAL_STORAGE -> {
+                            Toast.makeText(
+                                this,
+                                "Permission granted. You can read the storage files.",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            // 외부 저장소 접근 권한이 설정됐으니, 갤러리에 접근 시도
+                            val pickIntent = Intent(
+                                Intent.ACTION_PICK,
+                                MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                            )
+                            openGalleryLauncher.launch(pickIntent)
+                        }
+                    }
                 } else {
                     when (permName) {
                         // 이 Manifest는 자동으로 java.jar을 import하려 하는데, 지우고, android.Manifest를 import 해야 한다
@@ -187,24 +198,35 @@ class MainActivity : AppCompatActivity() {
             colorPickerDialog.show()
 
             val hslHue: HSLColorPickerSeekBar = colorPickerDialog.findViewById(R.id.hsl_hue)
-            val hslSat: HSLColorPickerSeekBar = colorPickerDialog.findViewById(R.id.hsl_saturation)
-            val hslLight: HSLColorPickerSeekBar = colorPickerDialog.findViewById(R.id.hsl_lightness)
-            val hslAlpha: HSLAlphaColorPickerSeekBar =
-                colorPickerDialog.findViewById(R.id.hsl_alpha)
+            val hslSat: HSLColorPickerSeekBar = colorPickerDialog.findViewById(R.id.hsl_sat)
+            val hslLight: HSLColorPickerSeekBar = colorPickerDialog.findViewById(R.id.hsl_light)
+            val hslAlpha: HSLAlphaColorPickerSeekBar = colorPickerDialog.findViewById(R.id.hsl_alpha)
+            val swatch: SwatchView = colorPickerDialog.findViewById(R.id.swatch)
 
-            val group = PickerGroup<IntegerHSLColor>().also {
-                it.registerPickers(
-                    hslHue,
-                    hslSat,
-                    hslLight,
-                    hslAlpha
-                )
+            hslHue.progress = 0
+            hslSat.progress = hslSat.max
+            hslLight.progress = hslLight.max
+            hslAlpha.progress = hslAlpha.max
+
+            val pickGroup = PickerGroup<IntegerHSLColor>().also {
+                it.registerPickers(hslHue, hslSat, hslLight, hslAlpha)
             }
+
+            pickGroup.addListener(
+                object : OnIntegerHSLColorPickListener() {
+                    override fun onColorChanged(
+                        picker: ColorSeekBar<IntegerHSLColor>,
+                        color: IntegerHSLColor,
+                        value: Int
+                    ) {
+                        swatch.setSwatchColor(color)
+                    }
+                }
+            )
 
             val btnApply: Button = colorPickerDialog.findViewById(R.id.btn_apply)
             btnApply.setOnClickListener {
-
-                val intColor = ColorUtils.HSLToColor(
+                var intColor = ColorUtils.HSLToColor(
                     floatArrayOf(
                         hslHue.pickedColor.floatH,
                         hslSat.pickedColor.floatS,
@@ -212,14 +234,13 @@ class MainActivity : AppCompatActivity() {
                     )
                 )
 
-                val red = Color.red(intColor)
-                val green = Color.green(intColor)
-                val blue = Color.blue(intColor)
-                val alpha = (hslAlpha.pickedColor.alpha * 100.0).roundToInt()
-                val hex: String =
-                    String.format("#%s%02x%02x%02x", AlphaToHex.alpha[alpha], red, green, blue)
-                drawingView?.setColor(hex)
+                var red = Color.red(intColor)
+                var green = Color.green(intColor)
+                var blue = Color.blue(intColor)
+                var alpha = (hslAlpha.pickedColor.alpha * 100.0).roundToInt()
+                var hex: String = String.format("#%s%02x%02x%02x", AlphaToHex.alpha[alpha], red, green, blue)
 
+                drawingView?.setColor(hex)
                 colorPickerDialog.dismiss()
             }
         }
@@ -306,6 +327,7 @@ class MainActivity : AppCompatActivity() {
                                 "File saved at $result",
                                 Toast.LENGTH_LONG
                             ).show()
+                            shareImg(result)
                         } else {
                             Toast.makeText(
                                 this@MainActivity,
@@ -334,6 +356,16 @@ class MainActivity : AppCompatActivity() {
         if (customProgressDialog != null) {
             customProgressDialog?.dismiss()
             customProgressDialog = null
+        }
+    }
+
+    private fun shareImg(result: String) { // result는 공유하려는 파일이 위치한 path
+        MediaScannerConnection.scanFile(this, arrayOf(result), null) { path, uri ->
+            val shareIntent = Intent()
+            shareIntent.action = Intent.ACTION_SEND
+            shareIntent.putExtra(Intent.EXTRA_STREAM, uri)
+            shareIntent.type = "image/png"
+            startActivity(Intent.createChooser(shareIntent, "Share")) // 공유하기 모달이 올라온다
         }
     }
 }
